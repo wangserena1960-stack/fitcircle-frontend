@@ -1,5 +1,5 @@
 // 記得這個是你的 Workers API 入口
-const API_BASE = "https://falling-bush-0aae.wangserena1960.workers.dev";
+const API_BASE = "https://fitcircle-api.wangserena1960.workers.dev";
 
 let currentUser = null;
 let currentRole = "coach";
