@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>FitCircle Smart Chat MVP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f3f4ff;
+      --bg-alt: #ffffff;
+      --primary: #4f46e5;
+      --primary-soft: #eef2ff;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --border-soft: #e5e7eb;
+      --danger: #ef4444;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.09);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #e0f2fe 0, #f9fafb 40%, #eef2ff 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 16px;
+      color: var(--text-main);
+    }
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 14px 18px 8px;
+      border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand-logo { width:32px;height:32px;border-radius:14px;background:conic-gradient(from 180deg,#4f46e5,#22c55e,#06b6d4,#f97316,#4f46e5);padding:3px; }
+    .brand-logo-inner { width:100%;height:100%;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#4f46e5; }
+    .brand-title { font-size:16px;font-weight:700; }
+    .brand-sub { font-size:11px;color:var(--text-sub); }
+
+    .role-toggle { display:inline-flex;padding:3px;border-radius:9999px;background:#e5e7eb;gap:3px; }
+    .role-btn { border:none;background:transparent;padding:5px 10px;font-size:11px;border-radius:9999px;cursor:pointer;color:var(--text-sub);display:flex;align-items:center;gap:4px;white-space:nowrap; }
+    .role-btn span.icon { font-size:13px; }
+    .role-btn.active { background:#fff;color:var(--primary);box-shadow:0 1px 5px rgba(15,23,42,0.18); }
+
+    main { flex:1;padding:10px 14px 12px;background:linear-gradient(180deg,rgba(239,246,255,0.92),#f9fafb);overflow-y:auto; }
+    .top-info { display:flex;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:13px; }
+    .hello { font-size:12px;color:var(--text-sub); }
+    .title { font-size:15px;font-weight:600;margin-top:1px; }
+    .desc { font-size:11px;color:var(--text-sub);margin-top:3px; }
+    .top-info-right { text-align:right;font-size:11px;color:var(--text-sub); }
+    .pill { display:inline-flex;align-items:center;gap:4px;border-radius:9999px;background:var(--primary-soft);color:var(--primary);padding:3px 8px;font-size:10px;font-weight:500;margin-bottom:4px; }
+
+    .section-tabs { display:flex;gap:6px;margin-bottom:10px;font-size:12px;overflow-x:auto; }
+    .section-tab-btn { border-radius:9999px;border:1px solid var(--border-soft);background:#fff;padding:4px 10px;cursor:pointer;white-space:nowrap;color:var(--text-sub); }
+    .section-tab-btn.active { border-color:rgba(79,70,229,0.35);background:var(--primary-soft);color:var(--primary);font-weight:600; }
+
+    .card { background:var(--bg-alt);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px;border:1px solid rgba(229,231,235,0.9);box-shadow:0 5px 12px rgba(15,23,42,0.04); }
+    .card-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px; }
+    .card-title { font-weight:600; }
+    .card-sub { font-size:11px;color:var(--text-sub); }
+    .tag { display:inline-flex;align-items:center;gap:4px;border-radius:9999px;background:#f3f4f6;padding:2px 7px;font-size:10px;color:var(--text-sub); }
+    .tag-dot { width:7px;height:7px;border-radius:9999px;background:#22c55e; }
+    .tag-dot.red { background:#f97316; }
+
+    .metrics-row { display:flex;gap:8px;margin-top:4px;font-size:11px;flex-wrap:wrap; }
+    .metric-item { flex:1 1 40%;padding:6px 8px;border-radius:var(--radius-md);background:#f9fafb;border:1px solid #e5e7eb; }
+    .metric-label { font-size:10px;color:var(--text-sub); }
+    .metric-value { font-size:13px;font-weight:600;margin-top:2px; }
+
+    .class-list { margin-top:6px;font-size:11px; }
+    .class-item { display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed #e5e7eb; }
+    .class-item:last-child { border-bottom:none; }
+    .class-main { display:flex;flex-direction:column;gap:2px; }
+    .class-name { font-weight:500; }
+    .class-meta { font-size:10px;color:var(--text-sub); }
+    .class-badge { font-size:11px;color:var(--primary);background:var(--primary-soft);border-radius:9999px;padding:3px 8px;cursor:pointer; }
+
+    .progress-bar { width:100%;height:7px;border-radius:9999px;background:#e5e7eb;overflow:hidden;margin-top:6px; }
+    .progress-fill { height:100%;border-radius:9999px;background:linear-gradient(90deg,#4f46e5,#22c55e); }
+
+    .btn-row { display:flex;gap:6px;margin-top:8px; }
+    .btn {
+      flex:1;border-radius:9999px;border:none;padding:6px 10px;font-size:11px;cursor:pointer;
+      display:inline-flex;justify-content:center;align-items:center;gap:4px;white-space:nowrap;
+    }
+    .btn-primary { background:var(--primary);color:#fff; }
+    .btn-ghost { background:#f9fafb;color:var(--text-sub);border:1px solid #e5e7eb; }
+    .btn-danger { background:rgba(248,113,113,0.08);color:var(--danger);border:1px solid rgba(248,113,113,0.4); }
+
+    .table { width:100%;border-collapse:collapse;margin-top:4px;font-size:11px; }
+    .table th,.table td { text-align:left;padding:4px 2px; }
+    .table th { color:var(--text-sub);font-weight:500; }
+    .table tr+tr td { border-top:1px solid #f3f4f6; }
+
+    .screen { display:none; }
+    .screen.active { display:block; }
+
+    .bottom-nav { border-top:1px solid rgba(229,231,235,0.7);background:rgba(249,250,251,0.98);display:flex;justify-content:space-around;padding:6px 4px; }
+    .nav-item { flex:1;text-align:center;font-size:10px;color:var(--text-sub);cursor:pointer;padding:4px 0; }
+    .nav-item span.icon { font-size:14px;display:block;margin-bottom:2px; }
+    .nav-item.active { color:var(--primary);font-weight:500; }
+
+    .form-group { margin-top:6px;font-size:12px; }
+    .form-label { font-size:11px;color:var(--text-sub);margin-bottom:3px; }
+    .form-input,.form-select,.form-textarea {
+      width:100%;padding:7px 9px;border-radius:10px;border:1px solid #e5e7eb;font-size:12px;outline:none;background:#f9fafb;
+    }
+    .form-textarea { resize:vertical;min-height:60px; }
+    .form-input:focus,.form-select:focus,.form-textarea:focus {
+      border-color:rgba(79,70,229,0.5);background:#fff;
+    }
+
+    #login-screen {
+      min-height:100vh;
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+  </style>
+</head>
+<body>
+<div id="login-screen">
+  <div style="width:100%;max-width:360px;background:white;border-radius:20px;box-shadow:0 10px 25px rgba(15,23,42,0.12);padding:20px 18px;">
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px;">FitCircle 後台登入</div>
+      <div style="font-size:12px;color:#6b7280;">請使用 Super Admin 帳號登入管理平台</div>
+    </div>
+    <div style="font-size:11px;color:#6b7280;background:#eff6ff;border-radius:10px;padding:6px 8px;margin-bottom:10px;">
+      Demo 帳號：<br>
+      Email：<code>owner@fitcircle.dev</code><br>
+      密碼：<code>fitcircle123</code>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Email</div>
+      <input id="login-email" class="form-input" type="email" placeholder="owner@fitcircle.dev">
+    </div>
+    <div class="form-group">
+      <div class="form-label">密碼</div>
+      <input id="login-password" class="form-input" type="password" placeholder="••••••••">
+    </div>
+    <div id="login-error" style="display:none;font-size:11px;color:#ef4444;margin-top:6px;">
+      帳號或密碼錯誤，請再試一次。
+    </div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button id="login-button" class="btn btn-primary">登入</button>
+    </div>
+  </div>
+</div>
+
+<div id="app-root" style="display:none;width:100%;max-width:420px;">
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="brand-logo"><div class="brand-logo-inner">FC</div></div>
+        <div>
+          <div class="brand-title">FitCircle</div>
+          <div class="brand-sub">Smart Chat · 團課 / 教練管理</div>
+        </div>
+      </div>
+      <div class="role-toggle">
+        <button class="role-btn" data-role="super_admin">
+          <span class="icon">🧑‍💼</span> Super Admin
+        </button>
+        <button class="role-btn active" data-role="coach">
+          <span class="icon">🧑‍🏫</span> 教練端
+        </button>
+        <button class="role-btn" data-role="student">
+          <span class="icon">🧑‍💻</span> 學生端
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <div class="top-info" id="top-admin" style="display:none;">
+        <div>
+          <div class="hello">Hi 平台 Owner 👋</div>
+          <div class="title">FitCircle 平台總覽</div>
+          <div class="desc">管理老師、學生、課程與 Smart Chat 規則。</div>
+        </div>
+        <div class="top-info-right">
+          <div class="pill">角色 · <strong>Super Admin</strong></div>
+          <div>你可以建立 / 管理所有使用者</div>
+        </div>
+      </div>
+      <div class="top-info" id="top-coach">
+        <div>
+          <div class="hello">Hi Serena 教練 👋</div>
+          <div class="title">今天 3 堂課 · 4 則學生訊息</div>
+          <div class="desc">Smart Chat 已幫你抓出請假 / 改課需求，等你確認。</div>
+        </div>
+        <div class="top-info-right">
+          <div class="pill">北極星 · <strong>120 堂 / 月</strong></div>
+          <div>本月管理堂數</div>
+        </div>
+      </div>
+      <div class="top-info" id="top-student" style="display:none;">
+        <div>
+          <div class="hello">Hi Serena 👋</div>
+          <div class="title">今天你有 1 堂課要上</div>
+          <div class="desc">別忘了提早 5 分鐘到場 💪</div>
+        </div>
+        <div class="top-info-right">
+          <div class="pill">錢包 · <strong>跨 2 位教練</strong></div>
+          <div>堂數集中在一個地方看</div>
+        </div>
+      </div>
+
+      <div class="section-tabs" id="tabs-admin" style="display:none;">
+        <button class="section-tab-btn active" data-screen="admin-dashboard">Dashboard</button>
+        <button class="section-tab-btn" data-screen="admin-coaches">Coaches</button>
+        <button class="section-tab-btn" data-screen="admin-students">Students</button>
+        <button class="section-tab-btn" data-screen="admin-leaves">Leave</button>
+      </div>
+      <div class="section-tabs" id="tabs-coach">
+        <button class="section-tab-btn active" data-screen="coach-dashboard">Dashboard</button>
+        <button class="section-tab-btn" data-screen="coach-classes">課程</button>
+        <button class="section-tab-btn" data-screen="coach-students">學生</button>
+        <button class="section-tab-btn" data-screen="coach-smartchat">Smart Chat</button>
+        <button class="section-tab-btn" data-screen="coach-revenue">收入</button>
+      </div>
+      <div class="section-tabs" id="tabs-student" style="display:none;">
+        <button class="section-tab-btn active" data-screen="student-home">首頁</button>
+        <button class="section-tab-btn" data-screen="student-schedule">課表</button>
+        <button class="section-tab-btn" data-screen="student-history">紀錄</button>
+        <button class="section-tab-btn" data-screen="student-account">帳戶</button>
+      </div>
+
+      <div class="screen active" id="admin-dashboard">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">平台總覽</div>
+              <div class="card-sub">老師 / 學生 / 課程 / 請假狀況一目了然</div>
+            </div>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-label">教師數</div>
+              <div class="metric-value" id="admin-count-coaches">-</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">學生數</div>
+              <div class="metric-value" id="admin-count-students">-</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">啟用課程</div>
+              <div class="metric-value" id="admin-count-classes">-</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">待審請假 / 改課</div>
+              <div class="metric-value" id="admin-count-pending">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">收入概覽</div>
+              <div class="card-sub">全平台紀錄的總付款金額</div>
+            </div>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-label">總付款金額</div>
+              <div class="metric-value">NT$ <span id="admin-total-payments">-</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="admin-coaches">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">教練列表</div>
+              <div class="card-sub">由 Super Admin 管理</div>
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>姓名</th><th>Email</th><th>手機</th><th>狀態</th></tr>
+            </thead>
+            <tbody id="admin-coach-table-body">
+              <tr><td colspan="4">載入中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">新增教練</div></div>
+          </div>
+          <div class="form-group">
+            <div class="form-label">姓名</div>
+            <input class="form-input" id="admin-new-coach-name">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Email（選填）</div>
+            <input class="form-input" id="admin-new-coach-email">
+          </div>
+          <div class="form-group">
+            <div class="form-label">手機（選填）</div>
+            <input class="form-input" id="admin-new-coach-phone">
+          </div>
+          <div class="form-group">
+            <div class="form-label">LINE ID（選填）</div>
+            <input class="form-input" id="admin-new-coach-line">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="admin-create-coach-btn">建立教練（demo）</button>
+          </div>
+          <div class="hint">建立成功後會立即出現在教練列表中。</div>
+        </div>
+      </div>
+
+      <div class="screen" id="admin-students">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">學生列表</div>
+              <div class="card-sub">由 Super Admin 管理</div>
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+            <tr><th>姓名</th><th>手機</th><th>LINE</th></tr>
+            </thead>
+            <tbody id="admin-student-table-body">
+            <tr><td colspan="3">載入中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">新增學生</div></div>
+          </div>
+          <div class="form-group">
+            <div class="form-label">姓名</div>
+            <input class="form-input" id="admin-new-student-name">
+          </div>
+          <div class="form-group">
+            <div class="form-label">手機（選填）</div>
+            <input class="form-input" id="admin-new-student-phone">
+          </div>
+          <div class="form-group">
+            <div class="form-label">LINE ID（選填）</div>
+            <input class="form-input" id="admin-new-student-line">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="admin-create-student-btn">建立學生（demo）</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="admin-leaves">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">待審請假 / 改課</div>
+              <div class="card-sub">全平台 Smart Chat 擷取的申請</div>
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+            <tr><th>學生</th><th>課程</th><th>類型</th><th>狀態</th></tr>
+            </thead>
+            <tbody id="admin-leaves-table-body">
+            <tr><td colspan="4">尚未串接（可之後用 /api/leave-requests）</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="screen" id="coach-dashboard">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">今日總覽</div>
+              <div class="card-sub">3 堂課 · 28 位學生 · 2 則請假待確認</div>
+            </div>
+            <div class="tag"><span class="tag-dot"></span> 營運穩定</div>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-label">本月收入</div>
+              <div class="metric-value">NT$ 58,200</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">活躍學生</div>
+              <div class="metric-value">34 人</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">堂數使用率</div>
+              <div class="metric-value">76%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="coach-classes">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">課程列表 · 本週</div>
+              <div class="card-sub">以一期價格 / 堂數 + 單堂價管理</div>
+            </div>
+          </div>
+          <div class="class-list">
+            <div class="class-item">
+              <div class="class-main">
+                <div class="class-name">Flow 瑜珈 · Mon</div>
+                <div class="class-meta">19:30–20:30 · 信義教室 · 12 / 15 人</div>
+              </div>
+              <div class="class-badge">管理</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="coach-students">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">學生名單</div>
+              <div class="card-sub">查看個人堂數 / 紀錄 / 付款狀況</div>
+            </div>
+          </div>
+          <table class="table">
+            <thead><tr><th>學生</th><th>剩餘</th><th>到期日</th></tr></thead>
+            <tbody>
+            <tr><td>Amy</td><td>8 / 12</td><td>2026/02/10</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="screen" id="coach-smartchat">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Smart Chat 面板</div>
+              <div class="card-sub">逐筆接受 / 不接受請假 / 改課，並發訊息給學生</div>
+            </div>
+            <div class="tag"><span class="tag-dot red"></span> 4 則待處理</div>
+          </div>
+          <table class="table">
+            <thead>
+            <tr><th>學生</th><th>原訊息</th><th>系統判斷</th></tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td>Amy</td>
+              <td>老師我今天有點不舒服...</td>
+              <td>請假 · 今晚 Flow</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="screen" id="coach-revenue">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">本月收入概況</div>
+              <div class="card-sub">預估結算 NT$ 62,000</div>
+            </div>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-label">總收入</div>
+              <div class="metric-value">NT$ 58,200</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">新生比例</div>
+              <div class="metric-value">32%</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">留存率</div>
+              <div class="metric-value">86%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="student-home">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">我的堂數錢包</div>
+              <div class="card-sub">跨 2 位教練 · 2 種課程</div>
+            </div>
+            <div class="tag"><span class="tag-dot"></span> 有效</div>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-label">剩餘堂數</div>
+              <div class="metric-value">8 / 12 堂</div>
+              <div class="progress-bar"><div class="progress-fill" style="width:66%;"></div></div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">到期日</div>
+              <div class="metric-value">2026/02/10</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="student-schedule">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">本週課表</div>
+              <div class="card-sub">可直接請假 / 改期 / 報名</div>
+            </div>
+          </div>
+          <div class="class-list">
+            <div class="class-item">
+              <div class="class-main">
+                <div class="class-name">Mon · Flow 瑜珈</div>
+                <div class="class-meta">19:30–20:30 · 信義教室 · 已報名</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="student-history">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">上課 & 請假紀錄</div>
+              <div class="card-sub">之後可串 /lesson_instances</div>
+            </div>
+          </div>
+          <table class="table">
+            <thead><tr><th>日期</th><th>課程</th><th>狀態</th></tr></thead>
+            <tbody>
+            <tr><td>2025/11/10</td><td>Flow 瑜珈</td><td>已上課</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="screen" id="student-account">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">我的帳戶</div>
+              <div class="card-sub">基本資訊 & 推薦碼</div>
+            </div>
+          </div>
+          <div style="font-size:12px;margin-bottom:6px;">
+            <strong>Serena Wang</strong><br>
+            以 LINE 登入 · 已綁定手機（demo）
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <nav class="bottom-nav" id="nav-admin" style="display:none;">
+      <div class="nav-item active" data-screen="admin-dashboard">
+        <span class="icon">🧑‍💼</span> Dashboard
+      </div>
+      <div class="nav-item" data-screen="admin-coaches">
+        <span class="icon">🧑‍🏫</span> Coaches
+      </div>
+      <div class="nav-item" data-screen="admin-students">
+        <span class="icon">🧑‍🎓</span> Students
+      </div>
+      <div class="nav-item" data-screen="admin-leaves">
+        <span class="icon">💬</span> Leave
+      </div>
+    </nav>
+
+    <nav class="bottom-nav" id="nav-coach">
+      <div class="nav-item active" data-screen="coach-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-screen="coach-classes">
+        <span class="icon">📅</span> 課程
+      </div>
+      <div class="nav-item" data-screen="coach-students">
+        <span class="icon">🧑‍🎓</span> 學生
+      </div>
+      <div class="nav-item" data-screen="coach-smartchat">
+        <span class="icon">💬</span> Smart Chat
+      </div>
+      <div class="nav-item" data-screen="coach-revenue">
+        <span class="icon">💰</span> 收入
+      </div>
+    </nav>
+
+    <nav class="bottom-nav" id="nav-student" style="display:none;">
+      <div class="nav-item active" data-screen="student-home">
+        <span class="icon">🏠</span> 首頁
+      </div>
+      <div class="nav-item" data-screen="student-schedule">
+        <span class="icon">📅</span> 課表
+      </div>
+      <div class="nav-item" data-screen="student-history">
+        <span class="icon">📜</span> 紀錄
+      </div>
+      <div class="nav-item" data-screen="student-account">
+        <span class="icon">⚙️</span> 帳戶
+      </div>
+    </nav>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
