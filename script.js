@@ -1,5 +1,6 @@
-// FitCircle Dashboard v1 前端腳本
-// 仍使用 /login-debug 做登入驗證，登入後呼叫 /admin/overview 顯示真實統計
+// FitCircle Dashboard v2 前端腳本
+// 優先用「正式登入」POST /api/login，必要時退回 /api/login-debug
+// 登入成功後呼叫 /api/admin/overview 顯示統計
 
 const API_BASE = "https://fitcircle-api.wangserena1960.workers.dev/api";
 
@@ -25,6 +26,12 @@ async function handleLogin(e) {
   const email = (emailInput.value || "").trim();
   const password = (passwordInput.value || "").trim();
 
+  if (!email || !password) {
+    errorEl.textContent = "請輸入 Email 與密碼。";
+    errorEl.style.display = "block";
+    return;
+  }
+
   errorEl.style.display = "none";
   errorEl.textContent = "";
   if (debugEl) debugEl.textContent = "";
@@ -32,49 +39,106 @@ async function handleLogin(e) {
   btn.disabled = true;
   statusSpan.textContent = "登入中…";
 
+  const debugPayload = {};
+
   try {
-    // 1) 先呼叫 login-debug（仍是硬寫死 demo 帳號）
-    const loginUrl =
-      `${API_BASE}/login-debug?email=` +
-      encodeURIComponent(email) +
-      `&password=` +
-      encodeURIComponent(password);
+    // 1) 優先嘗試正式登入：POST /api/login
+    let loginSuccess = false;
+    let loginData = null;
 
-    const loginRes = await fetch(loginUrl);
-    const loginData = await loginRes.json().catch(() => ({}));
+    try {
+      const loginRes = await fetch(`${API_BASE}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      loginData = await loginRes.json().catch(() => ({}));
 
-    const debugPayload = { loginStatus: loginRes.status, loginData };
+      debugPayload.loginStatus = loginRes.status;
+      debugPayload.loginData = loginData;
 
-    if (!loginRes.ok || !loginData.matchDemo) {
+      if (loginRes.ok && loginData && loginData.success) {
+        loginSuccess = true;
+      }
+    } catch (err) {
+      debugPayload.loginError = String(err);
+      console.error("呼叫 /api/login 失敗：", err);
+    }
+
+    // 2) 如果正式登入沒過，退回 login-debug（舊 demo 模式）
+    if (!loginSuccess) {
+      try {
+        const debugUrl =
+          `${API_BASE}/login-debug?email=` +
+          encodeURIComponent(email) +
+          `&password=` +
+          encodeURIComponent(password);
+
+        const debugRes = await fetch(debugUrl);
+        const debugData = await debugRes.json().catch(() => ({}));
+
+        debugPayload.loginDebugStatus = debugRes.status;
+        debugPayload.loginDebugData = debugData;
+
+        if (debugRes.ok && debugData.matchDemo) {
+          loginSuccess = true;
+          // 模擬 admin 資料
+          loginData = {
+            success: true,
+            admin: {
+              email,
+              name: "Demo Owner",
+              role: "super_admin",
+            },
+          };
+        }
+      } catch (err2) {
+        debugPayload.loginDebugError = String(err2);
+        console.error("呼叫 /api/login-debug 失敗：", err2);
+      }
+    }
+
+    if (!loginSuccess) {
       if (debugEl) {
-        debugPayload.error = "login failed";
         debugEl.textContent = JSON.stringify(debugPayload, null, 2);
       }
-      errorEl.textContent = "登入失敗，請確認帳號密碼（或稍後再試）";
+      errorEl.textContent = "登入失敗，請確認帳號密碼（或稍後再試）。";
       errorEl.style.display = "block";
+      statusSpan.textContent = "";
       return;
     }
 
-    // 2) 登入成功，顯示 Dashboard，並呼叫 /admin/overview
-    if (userEmailSpan) userEmailSpan.textContent = email;
+    // 3) 登入成功，顯示 Dashboard，使用 admin 資料
+    const admin = loginData.admin || {};
+    if (userEmailSpan) {
+      userEmailSpan.textContent = admin.email || email;
+    }
     if (appRoot) appRoot.style.display = "block";
+
     statusSpan.textContent = "登入成功，載入總覽中…";
 
-    const overviewUrl = `${API_BASE}/admin/overview`;
-    const overviewRes = await fetch(overviewUrl);
-    const overviewData = await overviewRes.json().catch(() => ({}));
+    // 4) 呼叫 /api/admin/overview
+    try {
+      const overviewRes = await fetch(`${API_BASE}/admin/overview`);
+      const overviewData = await overviewRes.json().catch(() => ({}));
 
-    debugPayload.overviewStatus = overviewRes.status;
-    debugPayload.overviewData = overviewData;
-    if (debugEl) {
-      debugEl.textContent = JSON.stringify(debugPayload, null, 2);
+      debugPayload.overviewStatus = overviewRes.status;
+      debugPayload.overviewData = overviewData;
+
+      if (overviewRes.ok && overviewData) {
+        fillOverviewStats(overviewData);
+        statusSpan.textContent = "總覽載入完成。";
+      } else {
+        statusSpan.textContent = "登入成功，但載入總覽時發生問題。";
+      }
+    } catch (err3) {
+      debugPayload.overviewError = String(err3);
+      console.error("呼叫 /api/admin/overview 失敗：", err3);
+      statusSpan.textContent = "登入成功，但載入總覽時發生例外。";
     }
 
-    if (overviewRes.ok && overviewData) {
-      fillOverviewStats(overviewData);
-      statusSpan.textContent = "總覽載入完成。";
-    } else {
-      statusSpan.textContent = "登入成功，但載入總覽時發生問題。";
+    if (debugEl) {
+      debugEl.textContent = JSON.stringify(debugPayload, null, 2);
     }
   } catch (err) {
     console.error("登入流程例外：", err);
@@ -102,7 +166,6 @@ function fillOverviewStats(data) {
     if (Number.isNaN(amount)) {
       totalPayments.textContent = "-";
     } else {
-      // 顯示成「NT$ 12,345」
       totalPayments.textContent =
         "NT$ " + amount.toLocaleString("zh-Hant-TW");
     }
