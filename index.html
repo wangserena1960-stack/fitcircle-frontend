@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>FitCircle 後台登入與總覽 Dashboard v1</title>
+  <title>FitCircle 後台登入與總覽 Dashboard v1 + 教練管理 v1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -12,8 +12,8 @@
       padding: 24px;
     }
     .container {
-      max-width: 960px;
-      margin: 0 auto;
+      max-width: 1120px;
+      margin: 0 auto 40px;
     }
     h1 {
       font-size: 28px;
@@ -45,7 +45,7 @@
       display: block;
       margin-bottom: 4px;
     }
-    input {
+    input, textarea, select {
       width: 100%;
       padding: 8px 10px;
       border-radius: 10px;
@@ -53,6 +53,10 @@
       margin-bottom: 10px;
       font-size: 14px;
       box-sizing: border-box;
+    }
+    textarea {
+      min-height: 60px;
+      resize: vertical;
     }
     button {
       border-radius: 999px;
@@ -63,6 +67,13 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+    }
+    button.secondary {
+      background: #e0e3ff;
+      color: #333;
+    }
+    button.danger {
+      background: #e53935;
     }
     button:disabled {
       opacity: 0.6;
@@ -114,13 +125,61 @@
       overflow: auto;
       font-size: 12px;
     }
+    /* 教練管理 */
+    .coach-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+      gap: 16px;
+    }
+    .coach-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .coach-table th,
+    .coach-table td {
+      border-bottom: 1px solid #e5e7ff;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .coach-table th {
+      background: #f4f5ff;
+      font-weight: 600;
+      font-size: 12px;
+      color: #555;
+    }
+    .coach-status {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+    .status-active {
+      background: #e1f7e6;
+      color: #1b5e20;
+    }
+    .status-inactive {
+      background: #ffe0e0;
+      color: #b71c1c;
+    }
+    .coach-actions button {
+      margin-right: 4px;
+      margin-bottom: 2px;
+    }
+    @media (max-width: 860px) {
+      .coach-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- 登入卡片 -->
     <div class="card">
       <h1>FitCircle 後台登入</h1>
-      <p class="sub">請使用 Super Admin 帳號登入，登入成功後會顯示總覽 Dashboard v1。</p>
+      <p class="sub">請使用 Super Admin 帳號登入，登入成功後會顯示 Dashboard 與教練管理 v1。</p>
 
       <div class="demo">
         <div>Demo 帳號（僅測試用）：</div>
@@ -142,7 +201,9 @@
       </form>
     </div>
 
+    <!-- Dashboard + 教練管理 -->
     <div id="app-root">
+      <!-- Dashboard 總覽 -->
       <div class="card">
         <h2 style="margin-top:0;">Dashboard 總覽 v1</h2>
         <p style="margin-top:4px; color:#555; font-size:14px;">
@@ -173,10 +234,62 @@
         </div>
       </div>
 
+      <!-- 教練管理 v1 -->
+      <div class="card" id="coach-section">
+        <h2 style="margin-top:0;">教練管理 v1</h2>
+        <p style="margin-top:4px; color:#555; font-size:14px;">
+          在這裡新增 / 編輯 / 刪除教練。所有資料直接寫入 Cloudflare D1 的 <code>coaches</code> 資料表。
+        </p>
+
+        <div class="coach-layout">
+          <!-- 左側：新增教練表單 -->
+          <div>
+            <h3 style="margin-top:0;">新增教練</h3>
+            <form id="coach-form">
+              <label for="coach-name">教練姓名（必填）</label>
+              <input id="coach-name" placeholder="例如：林小美" />
+
+              <label for="coach-email">Email</label>
+              <input id="coach-email" type="email" placeholder="可留空" />
+
+              <label for="coach-phone">電話 / Line ID</label>
+              <input id="coach-phone" placeholder="可留空" />
+
+              <label for="coach-notes">備註</label>
+              <textarea id="coach-notes" placeholder="例如：專長瑜珈、教學地點、提醒事項等"></textarea>
+
+              <button type="submit" id="coach-submit-btn">新增教練</button>
+              <span id="coach-form-status" style="margin-left:8px; font-size:13px; color:#555;"></span>
+            </form>
+          </div>
+
+          <!-- 右側：教練列表 -->
+          <div>
+            <h3 style="margin-top:0;">教練列表</h3>
+            <table class="coach-table">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>Email</th>
+                  <th>電話</th>
+                  <th>狀態</th>
+                  <th>備註</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="coach-table-body">
+                <!-- JS 動態填入 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Debug 卡片 -->
       <div class="card">
         <h3 style="margin-top:0;">技術 Debug 區（必要時才展開）</h3>
         <details>
-          <summary>登入與總覽 API 回傳 JSON</summary>
+          <summary>登入與總覽 / 教練 API 回傳 JSON</summary>
           <pre id="debug"></pre>
         </details>
       </div>
